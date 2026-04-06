@@ -1,0 +1,2 @@
+# Ultra-minimal deployment requirements
+streamlit>=1.28.0
