@@ -21,6 +21,56 @@ from nexus_core import (
     salib_problem_spec,
 )
 
+# Import new enhancement modules
+try:
+    from gis_integration import get_gis_integration
+    GIS_AVAILABLE = True
+except ImportError as e:
+    GIS_AVAILABLE = False
+    print(f"GIS module not available: {e}")
+
+try:
+    from ml_surrogates import get_ml_surrogate_manager
+    ML_AVAILABLE = True
+except ImportError as e:
+    ML_AVAILABLE = False
+    print(f"ML surrogates not available: {e}")
+
+try:
+    from irrigation_physics import get_irrigation_physics
+    IRRIGATION_AVAILABLE = True
+except ImportError as e:
+    IRRIGATION_AVAILABLE = False
+    print(f"Irrigation physics not available: {e}")
+
+try:
+    from climate_downscaling import get_climate_downscaling
+    CLIMATE_AVAILABLE = True
+except ImportError as e:
+    CLIMATE_AVAILABLE = False
+    print(f"Climate downscaling not available: {e}")
+
+try:
+    from economic_optimization import get_economic_optimizer
+    ECONOMIC_AVAILABLE = True
+except ImportError as e:
+    ECONOMIC_AVAILABLE = False
+    print(f"Economic optimization not available: {e}")
+
+try:
+    from report_generator import get_report_generator
+    REPORT_AVAILABLE = True
+except ImportError as e:
+    REPORT_AVAILABLE = False
+    print(f"Report generator not available: {e}")
+
+try:
+    from api_connectors import get_api_manager
+    API_AVAILABLE = True
+except ImportError as e:
+    API_AVAILABLE = False
+    print(f"API connectors not available: {e}")
+
 
 # ------------------------------
 # 1. DATABASE SETUP
@@ -109,7 +159,7 @@ else:
             sim_eng = st.selectbox("Simulation Engine", ["AquaCrop", "EPIC", "WaPOR"])
             use_breeding = st.checkbox("Enable In-Silico Breeding Gain")
 
-            f_len = st.number_input("Furrow Length (m)", value=150)
+            f_len = st.number_input("Furrow Length (m)", value=150.0)
             f_slp = st.number_input("Furrow Slope (%)", value=0.1)
             schedule = st.selectbox("Scheduling", ["Traditional", "ET-based", "Soil moisture based"])
             opt_eng = st.selectbox("Optimization Engine", ["Genetic Algorithm (GA)", "NSGA-II"])
@@ -128,6 +178,24 @@ else:
             run_morris_ui = st.checkbox("Compute Morris screening (μ*, σ)", value=False)
 
     run_trigger = st.button("🚀 Run Simulation-Optimization", type="primary", use_container_width=True)
+
+    # Create tabs outside the conditional so they always exist
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs(
+        [
+            "📊 Analysis Dashboard",
+            "🎯 Optimization Engine",
+            "📝 Field Entry",
+            "🎲 Uncertainty (MC)",
+            "🗺️ GIS Integration",
+            "🤖 ML Surrogates",
+            "⚙️ Irrigation Physics",
+            "🌡️ Climate Downscaling",
+            "💰 Economic Analysis",
+            "📄 Report Generator",
+            "📡 API Connectors",
+            "📂 Export",
+        ]
+    )
 
     if run_trigger:
         ctx = _pack_context(
@@ -177,6 +245,7 @@ else:
                     X_pareto, F_pareto = pymoo_with_file_coupling(ctx, pop_size=28, n_gen=35)
                 else:
                     X_pareto, F_pareto = run_pymoo_nsga2(ctx, pop_size=40, n_gen=50)
+                x_ga, f_ga, fitness_hist = None, None, None
             else:
                 X_pareto, F_pareto = None, None
                 x_ga, f_ga, fitness_hist = run_pymoo_ga_single_objective(ctx, pop_size=40, n_gen=50)
@@ -191,19 +260,38 @@ else:
             mc_df = monte_carlo_multiparam(ctx, n=mc_n, seed=42)
             morris_wp = run_morris_analysis(ctx, n_trajectories=30, output="wp", seed=44) if run_morris_ui else None
 
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
-            [
-                "📊 Analysis Dashboard",
-                "🎯 Optimization Engine",
-                "📝 Field Entry",
-                "🎲 Uncertainty (MC)",
-                "🌍 Spatial/WaPOR",
-                "📡 Mobile Sync",
-                "📂 Export",
-            ]
-        )
+        # Store results in session state
+        st.session_state.simulation_results = {
+            'pop': pop, 'supply': supply, 'demand': demand, 
+            'ag_demand': ag_demand, 'ag_cons': ag_cons, 'yld': yld, 
+            'wp': wp, 'temp': temp, 'eff': eff,
+            'X_pareto': X_pareto, 'F_pareto': F_pareto, 
+            'x_ga': x_ga, 'f_ga': f_ga, 'fitness_hist': fitness_hist,
+            'Si_wp': Si_wp, 'Y_wp': Y_wp, 'Si_ag': Si_ag, 
+            'mc_df': mc_df, 'morris_wp': morris_wp,
+            'use_file_coupling': use_file_coupling,
+            'country': country, 'target_year': target_year,
+            'crop_type': crop_type
+        }
+        st.session_state.simulation_run = True
 
-        with tab1:
+    # Tab content (tabs are already created above)
+    with tab1:
+        if st.session_state.get('simulation_run', False):
+            results = st.session_state.simulation_results
+            pop = results['pop']
+            supply = results['supply']
+            demand = results['demand']
+            ag_demand = results['ag_demand']
+            ag_cons = results['ag_cons']
+            yld = results['yld']
+            wp = results['wp']
+            temp = results['temp']
+            eff = results['eff']
+            country = results['country']
+            target_year = results['target_year']
+            use_file_coupling = results['use_file_coupling']
+            
             st.subheader(f"📈 Nexus Projections for {country} ({target_year})")
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Projected Population", f"{pop:.2f} M")
@@ -223,8 +311,25 @@ else:
                     "Replace runner internals with SWAT/AquaCrop executables when available."
                 )
             else:
-                st.info("Simulation path: **integrated analytical proxy** (same equations; switch coupling in sidebar).")
+                st.info(
+                    "Simulation path: **in-memory proxy** (fast, for research testing). "
+                    "Switch to **file-coupled** for external model integration."
+                )
+        else:
+            st.info("Please adjust parameters in the sidebar and click 'Run Simulation-Optimization' above to view results.")
 
+        # Generate report content (only if simulation has been run)
+        if st.session_state.get('simulation_run', False):
+            results = st.session_state.simulation_results
+            wp = results['wp']
+            yld = results['yld']
+            demand = results['demand']
+            temp = results['temp']
+            country = results['country']
+            target_year = results['target_year']
+            crop_type = results['crop_type']
+            use_file_coupling = results['use_file_coupling']
+            
             report_content = f"""
             TOKUMA 3-in-1 RESEARCH REPORT
             -----------------------------
@@ -249,60 +354,74 @@ else:
             )
 
         with tab2:
-            st.subheader(f"🎯 Optimization Engine: {opt_eng}")
-            st.caption(
-                "Single objective function wraps the nexus engine; pymoo evolves furrow length & slope. "
-                "NSGA-II minimizes water consumed and maximizes WP (Pareto front). **No random scatter.**"
-            )
-            opt_depth = ag_cons * 0.84
-            opt_f_len = f_len * 1.1
-            opt_eff_val = eff * 1.06
+            if st.session_state.get('simulation_run', False):
+                results = st.session_state.simulation_results
+                X_pareto = results['X_pareto']
+                F_pareto = results['F_pareto']
+                x_ga = results['x_ga']
+                f_ga = results['f_ga']
+                fitness_hist = results['fitness_hist']
+                ag_cons = results['ag_cons']
+                eff = results['eff']
+                f_len = f_len  # from sidebar
+                opt_eng = opt_eng  # from sidebar
+                
+                st.subheader(f"🎯 Optimization Engine: {opt_eng}")
+                st.caption(
+                    "Single objective function wraps the nexus engine; pymoo evolves furrow length & slope. "
+                    "NSGA-II minimizes water consumed and maximizes WP (Pareto front). **No random scatter.**"
+                )
+                opt_depth = ag_cons * 0.84
+                opt_f_len = f_len * 1.1
+                opt_eff_val = eff * 1.06
 
-            if opt_eng == "Genetic Algorithm (GA)":
-                gens = np.arange(1, len(fitness_hist) + 1)
-                fig = go.Figure()
-                fig.add_trace(
-                    go.Scatter(
-                        x=gens,
-                        y=fitness_hist,
-                        mode="lines+markers",
-                        name="Best ag_cons / WP",
+                if opt_eng == "Genetic Algorithm (GA)" and fitness_hist is not None:
+                    gens = np.arange(1, len(fitness_hist) + 1)
+                    fig = go.Figure()
+                    fig.add_trace(
+                        go.Scatter(
+                            x=gens,
+                            y=fitness_hist,
+                            mode="lines+markers",
+                            name="Best ag_cons / WP",
+                        )
                     )
-                )
-                fig.update_layout(
-                    title="GA: convergence (minimize ag water per unit productivity)",
-                    xaxis_title="Generation",
-                    yaxis_title="Objective",
-                )
-                st.plotly_chart(fig, use_container_width=True)
-                if f_ga is not None and len(np.asarray(f_ga).ravel()):
-                    xv = np.asarray(x_ga).ravel()
-                    st.caption(f"Best candidate (f_len, f_slope): ({float(xv[0]):.1f} m, {float(xv[1]):.3f})")
-            elif opt_eng == "NSGA-II" and X_pareto is not None and F_pareto is not None:
-                ag_c = F_pareto[:, 0]
-                wp_vals = -F_pareto[:, 1]
-                fl = X_pareto[:, 0]
-                fs = X_pareto[:, 1]
-                color_choice = st.radio("Color Pareto points by", ["Furrow length (m)", "Furrow slope (%)"], horizontal=True)
-                color = fl if color_choice.startswith("Furrow length") else fs
-                fig_pareto = px.scatter(
-                    x=ag_c,
-                    y=wp_vals,
-                    color=color,
-                    labels={"x": "Ag water consumed (BCM)", "y": "Water productivity index", "color": color_choice},
-                    title="Pareto front (pymoo NSGA-II on analytical / file-coupled objective)",
-                )
-                st.plotly_chart(fig_pareto, use_container_width=True)
-                st.dataframe(
-                    pd.DataFrame({"f_len_m": fl, "f_slope_pct": fs, "ag_cons": ag_c, "wp": wp_vals}),
-                    use_container_width=True,
-                )
+                    fig.update_layout(
+                        title="GA: convergence (minimize ag water per unit productivity)",
+                        xaxis_title="Generation",
+                        yaxis_title="Objective",
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    if f_ga is not None and x_ga is not None and len(np.asarray(f_ga).ravel()):
+                        xv = np.asarray(x_ga).ravel()
+                        st.caption(f"Best candidate (f_len, f_slope): ({float(xv[0]):.1f} m, {float(xv[1]):.3f})")
+                elif opt_eng == "NSGA-II" and X_pareto is not None and F_pareto is not None:
+                    ag_c = F_pareto[:, 0]
+                    wp_vals = -F_pareto[:, 1]
+                    fl = X_pareto[:, 0]
+                    fs = X_pareto[:, 1]
+                    color_choice = st.radio("Color Pareto points by", ["Furrow length (m)", "Furrow slope (%)"], horizontal=True)
+                    color = fl if color_choice.startswith("Furrow length") else fs
+                    fig_pareto = px.scatter(
+                        x=ag_c,
+                        y=wp_vals,
+                        color=color,
+                        labels={"x": "Ag water consumed (BCM)", "y": "Water productivity index", "color": color_choice},
+                        title="Pareto front (pymoo NSGA-II on analytical / file-coupled objective)",
+                    )
+                    st.plotly_chart(fig_pareto, use_container_width=True)
+                    st.dataframe(
+                        pd.DataFrame({"f_len_m": fl, "f_slope_pct": fs, "ag_cons": ag_c, "wp": wp_vals}),
+                        use_container_width=True,
+                    )
 
-            st.markdown("### 💎 Reference parameter set (sidebar)")
-            o1, o2, o3 = st.columns(3)
-            o1.metric("Reference irrigation depth proxy", f"{opt_depth:.2f} mm")
-            o2.metric("Reference furrow length", f"{opt_f_len:.1f} m")
-            o3.metric("System efficiency", f"{opt_eff_val:.1%}")
+                st.markdown("### 💎 Reference parameter set (sidebar)")
+                o1, o2, o3 = st.columns(3)
+                o1.metric("Reference irrigation depth proxy", f"{opt_depth:.2f} mm")
+                o2.metric("Reference furrow length", f"{opt_f_len:.1f} m")
+                o3.metric("System efficiency", f"{opt_eff_val:.1%}")
+            else:
+                st.info("Please run simulation to view optimization results.")
 
         with tab3:
             st.subheader("📝 Detailed PhD Field Observation Entry")
@@ -342,117 +461,172 @@ else:
                     st.success("Detailed observation synchronized successfully.")
 
         with tab4:
-            st.subheader("🎲 Uncertainty (MC) & global sensitivity (SALib)")
-            st.write(
-                f"**Monte Carlo:** {mc_n} draws over the same parameter bounds as Sobol "
-                f"({', '.join(salib_problem_spec()['names'])}). **Sobol:** N={sobol_n} (first-order S1, total-order ST)."
-            )
-
-            fig_comb = make_subplots(
-                rows=2,
-                cols=1,
-                row_heights=[0.38, 0.62],
-                subplot_titles=("Sobol indices (WP): S1 and ST", "WP distribution (MC) with kernel density"),
-                vertical_spacing=0.12,
-            )
-            names = salib_problem_spec()["names"]
-            fig_comb.add_bar(
-                x=names,
-                y=Si_wp["S1"],
-                name="S1 (WP)",
-                marker_color="#0056b3",
-                row=1,
-                col=1,
-            )
-            fig_comb.add_bar(
-                x=names,
-                y=Si_wp["ST"],
-                name="ST (WP)",
-                marker_color="#88c",
-                row=1,
-                col=1,
-            )
-            fig_comb.add_trace(
-                go.Histogram(x=mc_df["wp"], nbinsx=45, name="WP (MC)", marker_color="#002b5c", opacity=0.75),
-                row=2,
-                col=1,
-            )
-            fig_comb.update_layout(
-                height=720,
-                title_text="Overlay: Sobol sensitivity bars + WP uncertainty",
-                showlegend=True,
-                barmode="group",
-            )
-            fig_comb.update_yaxes(title_text="Index", row=1, col=1)
-            fig_comb.update_yaxes(title_text="Count", row=2, col=1)
-            st.plotly_chart(fig_comb, use_container_width=True)
-
-            cleft, cright = st.columns(2)
-            with cleft:
-                st.markdown("**Ag water consumed — Sobol (stress metric)**")
-                fig_ag = go.Figure()
-                fig_ag.add_bar(x=names, y=Si_ag["S1"], name="S1 (ag_cons)", marker_color="#c0392b")
-                fig_ag.add_bar(x=names, y=Si_ag["ST"], name="ST (ag_cons)", marker_color="#e74c3c")
-                fig_ag.update_layout(barmode="group", title="S1 and ST for agricultural water consumed")
-                st.plotly_chart(fig_ag, use_container_width=True)
-            with cright:
-                st.markdown("**Correlation (MC sample)**")
-                num_cols = ["climate_sensitivity", "f_len", "f_slp", "temp_scale", "supply_perturb", "wp", "ag_cons", "yield"]
-                corr = mc_df[num_cols].corr()
-                fig_hm = px.imshow(
-                    corr,
-                    text_auto=".2f",
-                    aspect="auto",
-                    color_continuous_scale="RdBu_r",
-                    title="Parameter & output correlation heatmap",
+            if st.session_state.get('simulation_run', False):
+                results = st.session_state.simulation_results
+                Si_wp = results['Si_wp']
+                Si_ag = results['Si_ag']
+                mc_df = results['mc_df']
+                morris_wp = results['morris_wp']
+                sobol_n = sobol_n  # from sidebar
+                mc_n = mc_n  # from sidebar
+                
+                st.subheader("🎲 Uncertainty (MC) & global sensitivity (SALib)")
+                st.write(
+                    f"**Monte Carlo:** {mc_n} draws over the same parameter bounds as Sobol "
+                    f"({', '.join(salib_problem_spec()['names'])}). **Sobol:** N={sobol_n} (first-order S1, total-order ST)."
                 )
-                st.plotly_chart(fig_hm, use_container_width=True)
 
-            h1, h2, h3 = st.columns(3)
-            with h1:
-                st.plotly_chart(px.histogram(mc_df, x="wp", nbins=40, title="WP"), use_container_width=True)
-            with h2:
-                st.plotly_chart(px.histogram(mc_df, x="yield", nbins=40, title="Yield (proxy)"), use_container_width=True)
-            with h3:
-                st.plotly_chart(px.histogram(mc_df, x="ag_cons", nbins=40, title="Ag water consumed"), use_container_width=True)
+                fig_comb = make_subplots(
+                    rows=2,
+                    cols=1,
+                    row_heights=[0.38, 0.62],
+                    subplot_titles=("Sobol indices (WP): S1 and ST", "WP distribution (MC) with kernel density"),
+                    vertical_spacing=0.12,
+                )
+                names = salib_problem_spec()["names"]
+                fig_comb.add_bar(
+                    x=names,
+                    y=Si_wp["S1"],
+                    name="S1 (WP)",
+                    marker_color="#0056b3",
+                    row=1,
+                    col=1,
+                )
+                fig_comb.add_bar(
+                    x=names,
+                    y=Si_wp["ST"],
+                    name="ST (WP)",
+                    marker_color="#88c",
+                    row=1,
+                    col=1,
+                )
+                fig_comb.add_trace(
+                    go.Histogram(x=mc_df["wp"], nbinsx=45, name="WP (MC)", marker_color="#002b5c", opacity=0.75),
+                    row=2,
+                    col=1,
+                )
+                fig_comb.update_layout(
+                    height=720,
+                    title_text="Overlay: Sobol sensitivity bars + WP uncertainty",
+                    showlegend=True,
+                    barmode="group",
+                )
+                fig_comb.update_yaxes(title_text="Index", row=1, col=1)
+                fig_comb.update_yaxes(title_text="Count", row=2, col=1)
+                st.plotly_chart(fig_comb, use_container_width=True)
 
-            if morris_wp is not None:
-                st.markdown("**Morris screening (ranking μ* vs σ)**")
-                mu_star = np.array(morris_wp["mu_star"])
-                sigma = np.array(morris_wp["sigma"])
-                fig_m = go.Figure()
-                fig_m.add_trace(
-                    go.Scatter(
-                        x=mu_star,
-                        y=sigma,
-                        mode="markers+text",
-                        text=names,
-                        textposition="top center",
-                        marker=dict(size=12, color="#0056b3"),
+                cleft, cright = st.columns(2)
+                with cleft:
+                    st.markdown("**Ag water consumed — Sobol (stress metric)**")
+                    fig_ag = go.Figure()
+                    fig_ag.add_bar(x=names, y=Si_ag["S1"], name="S1 (ag_cons)", marker_color="#c0392b")
+                    fig_ag.add_bar(x=names, y=Si_ag["ST"], name="ST (ag_cons)", marker_color="#e74c3c")
+                    fig_ag.update_layout(barmode="group", title="S1 and ST for agricultural water consumed")
+                    st.plotly_chart(fig_ag, use_container_width=True)
+                with cright:
+                    st.markdown("**Correlation (MC sample)**")
+                    num_cols = ["climate_sensitivity", "f_len", "f_slp", "temp_scale", "supply_perturb", "wp", "ag_cons", "yield"]
+                    corr = mc_df[num_cols].corr()
+                    fig_hm = px.imshow(
+                        corr,
+                        text_auto=".2f",
+                        aspect="auto",
+                        color_continuous_scale="RdBu_r",
+                        title="Parameter & output correlation heatmap",
                     )
-                )
-                fig_m.update_layout(
-                    title="Morris: μ* vs σ (screening)",
-                    xaxis_title="μ*",
-                    yaxis_title="σ",
-                )
-                st.plotly_chart(fig_m, use_container_width=True)
+                    st.plotly_chart(fig_hm, use_container_width=True)
+
+                h1, h2, h3 = st.columns(3)
+                with h1:
+                    st.plotly_chart(px.histogram(mc_df, x="wp", nbins=40, title="WP"), use_container_width=True)
+                with h2:
+                    st.plotly_chart(px.histogram(mc_df, x="yield", nbins=40, title="Yield (proxy)"), use_container_width=True)
+                with h3:
+                    st.plotly_chart(px.histogram(mc_df, x="ag_cons", nbins=40, title="Ag water consumed"), use_container_width=True)
+
+                if morris_wp is not None:
+                    st.markdown("**Morris screening (ranking μ* vs σ)**")
+                    mu_star = np.array(morris_wp["mu_star"])
+                    sigma = np.array(morris_wp["sigma"])
+                    fig_m = go.Figure()
+                    fig_m.add_trace(
+                        go.Scatter(
+                            x=mu_star,
+                            y=sigma,
+                            mode="markers+text",
+                            text=names,
+                            textposition="top center",
+                            marker=dict(size=12, color="#0056b3"),
+                        )
+                    )
+                    fig_m.update_layout(
+                        title="Morris: μ* vs σ (screening)",
+                        xaxis_title="μ*",
+                        yaxis_title="σ",
+                    )
+                    st.plotly_chart(fig_m, use_container_width=True)
+            else:
+                st.info("Please run simulation to view uncertainty analysis results.")
 
         with tab5:
-            st.subheader("🌍 Spatial (QGIS) & WaPOR Proxy")
-            if st.checkbox("Fetch WaPOR Actual ET Data"):
-                st.json({"Actual_ET": 450.5, "Biomass": 12.2, "Reference_ET": 510.2})
-            st.file_uploader("Upload spatial CSV", type="csv")
-            st.caption(
-                "For full coupling: export rasters to CSV → ingest here; engine coupling uses `model_templates/` for tabular runs."
-            )
+            if GIS_AVAILABLE:
+                gis_results = get_gis_integration().render_gis_interface()
+                if gis_results and len(gis_results) == 2:
+                    site_data, map_obj = gis_results
+                    if site_data:
+                        st.session_state.gis_site_data = site_data
+            else:
+                st.error("GIS Integration module not available. Please install required packages: folium, geopandas, shapely")
 
         with tab6:
-            st.subheader("📡 Mobile Device Connectivity")
-            st.info("Sync data via REST API configuration:")
-            st.code('POST http://[SERVER_IP]:8000/sync\nJSON: {"location": "Site Name", "rainfall": 12.5, "crop": "Teff"}')
+            if ML_AVAILABLE:
+                ml_results = get_ml_surrogate_manager().render_ml_interface()
+                if ml_results:
+                    st.session_state.ml_results = ml_results
+            else:
+                st.error("ML Surrogates module not available. Please install required packages: scikit-learn, shap, lime")
 
         with tab7:
+            if IRRIGATION_AVAILABLE:
+                irrigation_results = get_irrigation_physics().render_irrigation_physics_interface()
+                if irrigation_results:
+                    st.session_state.irrigation_results = irrigation_results
+            else:
+                st.error("Irrigation Physics module not available. Please install required packages: scipy")
+
+        with tab8:
+            if CLIMATE_AVAILABLE:
+                climate_results = get_climate_downscaling().render_climate_downscaling_interface()
+                if climate_results:
+                    st.session_state.climate_results = climate_results
+            else:
+                st.error("Climate Downscaling module not available. Please install required packages: netcdf4, xarray")
+
+        with tab9:
+            if ECONOMIC_AVAILABLE:
+                economic_results = get_economic_optimizer().render_economic_interface()
+                if economic_results:
+                    st.session_state.economic_results = economic_results
+            else:
+                st.error("Economic Optimization module not available. Please install required packages: pymoo")
+
+        with tab10:
+            if REPORT_AVAILABLE:
+                report_results = get_report_generator().render_report_generator_interface()
+                if report_results:
+                    st.session_state.report_results = report_results
+            else:
+                st.error("Report Generator module not available. Please install required packages: fpdf2, pylatex")
+
+        with tab11:
+            if API_AVAILABLE:
+                api_results = get_api_manager().render_api_interface()
+                if api_results:
+                    st.session_state.api_results = api_results
+            else:
+                st.error("API Connectors module not available. Please install required packages: requests")
+
+        with tab12:
             st.subheader("📂 Export Research Data")
             if st.button("Archive to 13-Column Log"):
                 st.success("Simulation Archived.")
@@ -479,12 +653,14 @@ else:
                     mime="text/csv",
                 )
 
-            st.download_button(
-                "Download Monte Carlo table (CSV)",
-                data=mc_df.to_csv(index=False),
-                file_name="monte_carlo_nexus.csv",
-                mime="text/csv",
-            )
-
-    else:
-        st.info("👈 Please adjust parameters in the sidebar and click **'Run Simulation-Optimization'** above to view results.")
+            # Monte Carlo download only available if simulation has been run
+            if st.session_state.get('simulation_run', False):
+                mc_df = st.session_state.simulation_results['mc_df']
+                st.download_button(
+                    "Download Monte Carlo table (CSV)",
+                    data=mc_df.to_csv(index=False),
+                    file_name="monte_carlo_nexus.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.info("Run simulation first to download Monte Carlo data")
