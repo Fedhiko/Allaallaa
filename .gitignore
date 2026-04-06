@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+tokuma_phd_research.db
+.ipynb_checkpoints/
