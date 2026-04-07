@@ -22,9 +22,11 @@ fpdf2>=2.7.0
 pylatex>=1.4.0
 pyproj>=3.6.0
 
+# Climate downscaling dependencies (required for tab8)
+netcdf4>=1.6.0
+xarray>=2023.8.0
+
 # Removed problematic packages for cloud deployment:
 # tensorflow-cpu - requires specific Python versions
-# netcdf4 - heavy dependency
-# xarray - heavy dependency
 # fiona - geospatial dependency issues
 # rasterio - geospatial dependency issues
