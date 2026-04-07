@@ -1,25 +1,30 @@
-streamlit
-pandas
-numpy
-plotly
-SALib
-pymoo
-scipy
-folium
-streamlit-folium
-geopandas
-shapely
-fiona
-scikit-learn
-shap
-lime
-tensorflow-cpu
-netcdf4
-xarray
-requests
-reportlab
-fpdf2
-pylatex
-pydantic
-pyproj
-rasterio
+# Deployment-ready requirements for cloud platforms
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.18.0
+scipy>=1.10.0
+requests>=2.31.0
+pydantic>=2.0.0
+
+# Optional dependencies - will be handled gracefully if not available
+SALib>=1.4.7
+pymoo>=0.6.0
+scikit-learn>=1.3.0
+folium>=0.14.0
+streamlit-folium>=0.16.0
+geopandas>=0.13.0
+shapely>=2.0.0
+shap>=0.42.0
+lime>=0.2.0
+reportlab>=4.0.0
+fpdf2>=2.7.0
+pylatex>=1.4.0
+pyproj>=3.6.0
+
+# Removed problematic packages for cloud deployment:
+# tensorflow-cpu - requires specific Python versions
+# netcdf4 - heavy dependency
+# xarray - heavy dependency
+# fiona - geospatial dependency issues
+# rasterio - geospatial dependency issues
