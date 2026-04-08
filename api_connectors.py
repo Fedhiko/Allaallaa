@@ -36,17 +36,40 @@ class APIConnector:
             url = f"{self.base_url}/{endpoint}"
             if self.api_key:
                 params = params or {}
-                params['apikey'] = self.api_key
+                # Use correct parameter name for different APIs
+                if 'openweathermap' in self.base_url.lower():
+                    params['appid'] = self.api_key
+                else:
+                    params['apikey'] = self.api_key
+            
+            # Debug information
+            st.write(f"Debug: Making request to {url}")
+            st.write(f"Debug: Parameters: {params}")
             
             response = self.session.get(url, params=params, timeout=timeout)
+            
+            # Debug response status
+            st.write(f"Debug: Response status: {response.status_code}")
+            
             response.raise_for_status()
-            return response.json()
+            
+            # Debug response content
+            try:
+                data = response.json()
+                st.write(f"Debug: Response data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+                return data
+            except json.JSONDecodeError:
+                st.write(f"Debug: Response text: {response.text[:200]}...")
+                return {}
         
         except RequestException as e:
             st.error(f"API request failed: {str(e)}")
+            st.write(f"Debug: URL was: {url}")
+            st.write(f"Debug: Params were: {params}")
             return {}
         except json.JSONDecodeError as e:
             st.error(f"Invalid JSON response: {str(e)}")
+            st.write(f"Debug: Response text: {response.text[:200]}...")
             return {}
 
 
