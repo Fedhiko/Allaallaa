@@ -571,12 +571,12 @@ class IntegratedAPIManager:
                 if "weather" in conditions:
                     weather = conditions["weather"]
                     col2a, col2b, col2c = st.columns(3)
-                    col2a.metric("Temperature", f"{weather.get('temperature', 'N/A')}°C")
-                    col2b.metric("Humidity", f"{weather.get('humidity', 'N/A')}%")
-                    col2c.metric("Wind Speed", f"{weather.get('wind_speed', 'N/A')} m/s")
+                    col2a.metric("Temperature", f"{weather.get('temperature', 0):.1f}°C")
+                    col2b.metric("Humidity", f"{weather.get('humidity', 0):.0f}%")
+                    col2c.metric("Wind Speed", f"{weather.get('wind_speed', 0):.1f} m/s")
                     
                     col2d, col2e, col2f = st.columns(3)
-                    col2d.metric("Pressure", f"{weather.get('pressure', 'N/A')} hPa")
+                    col2d.metric("Pressure", f"{weather.get('pressure', 0):.1f} hPa")
                     col2e.metric("Description", weather.get('description', 'N/A'))
                     col2f.metric("Location", weather.get('location', 'N/A'))
                 
@@ -597,13 +597,13 @@ class IntegratedAPIManager:
                     if "aeti" in wapor:
                         aeti = wapor["aeti"]
                         col_wapor1, col_wapor2 = st.columns(2)
-                        col_wapor1.metric("Actual ET", f"{aeti.get('latest_value', 'N/A')} {aeti.get('unit', '')}")
+                        col_wapor1.metric("Actual ET", f"{aeti.get('latest_value', 0):.2f} {aeti.get('unit', '')}")
                         col_wapor2.metric("30-day Trend", f"{float(aeti.get('trend_30d', 0)):.3f}")
                     
                     if "npp" in wapor:
                         npp = wapor["npp"]
                         col_wapor3, col_wapor4 = st.columns(2)
-                        col_wapor3.metric("NPP", f"{npp.get('latest_value', 'N/A')} {npp.get('unit', '')}")
+                        col_wapor3.metric("NPP", f"{npp.get('latest_value', 0):.2f} {npp.get('unit', '')}")
                         col_wapor4.metric("30-day Average", f"{float(npp.get('average_30d', 0)):.3f}")
                 
                 # Visualization
