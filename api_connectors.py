@@ -550,8 +550,42 @@ class IntegratedAPIManager:
             )
             
             if st.button("Initialize APIs"):
-                self.initialize_connectors(wapor_api_key, weather_api_key)
-                st.success("API connectors initialized!")
+                if not wapor_api_key.strip() or not weather_api_key.strip():
+                    st.error("❌ Please enter valid API keys for both services")
+                else:
+                    with st.spinner("Initializing API connectors..."):
+                        # Debug: Show actual keys being used
+                        st.write(f"🔍 Debug: Weather key length: {len(weather_api_key.strip())}")
+                        st.write(f"🔍 Debug: WaPOR key length: {len(wapor_api_key.strip())}")
+                        
+                        if len(weather_api_key.strip()) < 10:
+                            st.error("❌ Weather API key seems too short (must be 32+ characters)")
+                        if len(wapor_api_key.strip()) < 10:
+                            st.error("❌ WaPOR API key seems too short (must be 32+ characters)")
+                        
+                        # Initialize with proper error handling
+                        try:
+                            self.initialize_connectors(wapor_api_key.strip(), weather_api_key.strip())
+                            st.success("✅ API connectors initialized successfully!")
+                            st.session_state.api_initialized = True
+                            
+                            # Test immediate API call
+                            st.write("🧪 Testing API connections...")
+                            test_weather = self.weather_connector.get_current_weather((8.5, 38.5)) if self.weather_connector else None
+                            test_wapor = self.wapor_connector.get_current_aeti((8.5, 38.5)) if self.wapor_connector else None
+                            
+                            if test_weather and 'temperature' in test_weather:
+                                st.success(f"✅ Weather API working: {test_weather['temperature']}°C")
+                            else:
+                                st.error("❌ Weather API test failed")
+                                
+                            if test_wapor and 'latest_value' in test_wapor:
+                                st.success(f"✅ WaPOR API working: {test_wapor['latest_value']}")
+                            else:
+                                st.error("❌ WaPOR API test failed")
+                                
+                        except Exception as e:
+                            st.error(f"❌ API initialization failed: {str(e)}")
             
             st.write("**Location Selection**")
             lat = st.number_input("Latitude", -90.0, 90.0, 8.5, 4.0)
