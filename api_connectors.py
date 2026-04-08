@@ -302,13 +302,13 @@ class IntegratedAPIManager:
         """Initialize API connectors with provided keys"""
         if wapor_api_key:
             # Extract just the API key if full URL was provided
-            if 'api' in wapor_api_key.lower():
+            if wapor_api_key.startswith('http'):
                 # Assume it's a URL, extract the key part
                 wapor_api_key = wapor_api_key.split('/')[-1] if '/' in wapor_api_key else wapor_api_key
             self.wapor_connector = WaPORConnector(wapor_api_key)
         if weather_api_key:
             # Extract just the API key if full URL was provided
-            if 'api' in weather_api_key.lower():
+            if weather_api_key.startswith('http'):
                 # Assume it's a URL, extract the key part
                 weather_api_key = weather_api_key.split('/')[-1] if '/' in weather_api_key else weather_api_key
             self.weather_connector = OpenWeatherMapConnector(weather_api_key)
