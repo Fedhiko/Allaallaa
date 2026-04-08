@@ -43,14 +43,29 @@ class APIConnector:
                     params['apikey'] = self.api_key
             
             response = self.session.get(url, params=params, timeout=timeout)
+            
+            # Check response content type
+            content_type = response.headers.get('content-type', '')
+            if 'text/html' in content_type:
+                st.error(f"API returned HTML instead of JSON. Check API key and endpoint.")
+                return {}
+            
             response.raise_for_status()
-            return response.json()
+            
+            # Try to parse JSON with better error handling
+            try:
+                data = response.json()
+                if not data or (isinstance(data, dict) and len(data) == 0):
+                    st.warning("API returned empty response")
+                    return {}
+                return data
+            except json.JSONDecodeError as e:
+                st.error(f"JSON parsing failed: {str(e)}")
+                st.write(f"Response content: {response.text[:200]}...")
+                return {}
         
         except RequestException as e:
             st.error(f"API request failed: {str(e)}")
-            return {}
-        except json.JSONDecodeError as e:
-            st.error(f"Invalid JSON response: {str(e)}")
             return {}
 
 
