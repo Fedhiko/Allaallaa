@@ -73,16 +73,16 @@ class WaPORConnector(APIConnector):
     """FAO WaPOR API connector for evapotranspiration and biomass data"""
     
     def __init__(self, api_key: str = None):
-        # WaPOR API endpoints
+        # WaPOR API endpoints - use correct API URLs
         super().__init__(
-            "https://wapor.apps.fao.org/api",
+            "https://data.apps.fao.org/api/v2",  # Correct API endpoint
             api_key
         )
         self.data_levels = {
             "L1": "Continent (250m)",
             "L2": "Country (100m)", 
             "L3": "Basin (30m)",
-            "L4": "Irrigation Scheme (10m)"
+            "L4": "Field (10m)"
         }
         
         self.indicators = {
