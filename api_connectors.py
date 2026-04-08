@@ -42,34 +42,15 @@ class APIConnector:
                 else:
                     params['apikey'] = self.api_key
             
-            # Debug information
-            st.write(f"Debug: Making request to {url}")
-            st.write(f"Debug: Parameters: {params}")
-            
             response = self.session.get(url, params=params, timeout=timeout)
-            
-            # Debug response status
-            st.write(f"Debug: Response status: {response.status_code}")
-            
             response.raise_for_status()
-            
-            # Debug response content
-            try:
-                data = response.json()
-                st.write(f"Debug: Response data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
-                return data
-            except json.JSONDecodeError:
-                st.write(f"Debug: Response text: {response.text[:200]}...")
-                return {}
+            return response.json()
         
         except RequestException as e:
             st.error(f"API request failed: {str(e)}")
-            st.write(f"Debug: URL was: {url}")
-            st.write(f"Debug: Params were: {params}")
             return {}
         except json.JSONDecodeError as e:
             st.error(f"Invalid JSON response: {str(e)}")
-            st.write(f"Debug: Response text: {response.text[:200]}...")
             return {}
 
 
@@ -323,18 +304,10 @@ class IntegratedAPIManager:
     def initialize_connectors(self, wapor_api_key: str = None, 
                           weather_api_key: str = None):
         """Initialize API connectors with provided keys"""
-        if wapor_api_key:
-            # Extract just the API key if full URL was provided
-            if wapor_api_key.startswith('http'):
-                # Assume it's a URL, extract the key part
-                wapor_api_key = wapor_api_key.split('/')[-1] if '/' in wapor_api_key else wapor_api_key
-            self.wapor_connector = WaPORConnector(wapor_api_key)
-        if weather_api_key:
-            # Extract just the API key if full URL was provided
-            if weather_api_key.startswith('http'):
-                # Assume it's a URL, extract the key part
-                weather_api_key = weather_api_key.split('/')[-1] if '/' in weather_api_key else weather_api_key
-            self.weather_connector = OpenWeatherMapConnector(weather_api_key)
+        if wapor_api_key and wapor_api_key.strip():
+            self.wapor_connector = WaPORConnector(wapor_api_key.strip())
+        if weather_api_key and weather_api_key.strip():
+            self.weather_connector = OpenWeatherMapConnector(weather_api_key.strip())
     
     def get_cached_data(self, cache_key: str) -> Any:
         """Get cached data if not expired"""
