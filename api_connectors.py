@@ -386,6 +386,43 @@ class IntegratedAPIManager:
                 "npp": npp
             }
         
+        # If no real data available, use mock data for testing
+        if not field_data.get("weather") and not field_data.get("wapor"):
+            st.warning("APIs not responding, using mock data for testing")
+            field_data.update({
+                "weather": {
+                    "temperature": 25.5,
+                    "humidity": 65.0,
+                    "pressure": 1013.2,
+                    "wind_speed": 3.2,
+                    "wind_direction": 180,
+                    "description": "partly cloudy",
+                    "location": "Test Location",
+                    "timestamp": datetime.now().isoformat()
+                },
+                "forecast": {
+                    "next_3_days_avg_temp": 24.8,
+                    "next_3_days_total_rain": 2.5,
+                    "next_3_days_avg_humidity": 62.0
+                },
+                "wapor": {
+                    "aeti": {
+                        "latest_value": 3.2,
+                        "unit": "mm/day",
+                        "date": datetime.now().strftime("%Y-%m-%d"),
+                        "trend_30d": 0.05,
+                        "average_30d": 3.1
+                    },
+                    "npp": {
+                        "latest_value": 4.8,
+                        "unit": "gC/m²/day",
+                        "date": datetime.now().strftime("%Y-%m-%d"),
+                        "trend_30d": 0.02,
+                        "average_30d": 4.6
+                    }
+                }
+            })
+        
         # Cache the results
         self.cache_data(cache_key, field_data)
         return field_data
