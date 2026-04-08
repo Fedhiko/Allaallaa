@@ -614,11 +614,17 @@ class IntegratedAPIManager:
             if 'field_conditions' in st.session_state:
                 conditions = st.session_state.field_conditions
                 
+                # Debug: Show what data we have
+                st.write("🔍 Debug: Field conditions data structure")
+                st.write(f"Keys: {list(conditions.keys())}")
+                
                 st.write("**🌡️ Current Field Conditions**")
                 
                 # Weather data
                 if "weather" in conditions:
                     weather = conditions["weather"]
+                    st.write(f"🔍 Debug: Weather data: {weather}")
+                    
                     col2a, col2b, col2c = st.columns(3)
                     col2a.metric("Temperature", f"{weather.get('temperature', 0):.1f}°C")
                     col2b.metric("Humidity", f"{weather.get('humidity', 0):.0f}%")
@@ -628,6 +634,8 @@ class IntegratedAPIManager:
                     col2d.metric("Pressure", f"{weather.get('pressure', 0):.1f} hPa")
                     col2e.metric("Description", weather.get('description', 'N/A'))
                     col2f.metric("Location", weather.get('location', 'N/A'))
+                else:
+                    st.warning("⚠️ Weather data not available")
                 
                 # Forecast data
                 if "forecast" in conditions:
