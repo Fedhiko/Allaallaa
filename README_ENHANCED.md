@@ -105,58 +105,87 @@ pip install pylatex python-bibtex pydantic pyproj rasterio
 
 ## 🎯 Usage Guide
 
+### Phased Workflow (Scholar-Recommended Structure)
+
+The platform organizes the former 12 tabs into **5 logical phases** while preserving every module:
+
+| Phase | Sub-tabs | Original features preserved |
+|-------|----------|----------------------------|
+| **Phase 1: Drivers & Projections** | Dashboard, Climate Downscaling, Population | Nexus metrics, CMIP6/SSP downscaling |
+| **Phase 2: Simulation & Analysis** | Optimization, Uncertainty, GIS, ML & Economic, Irrigation Physics | GA/NSGA-II, SALib/MC, GIS, ML, economics, furrow physics |
+| **Phase 3: Irrigation Scheduling** | Timing & amount from predicted drivers | NEW — stress-based scheduling after Phase 1–2 |
+| **Phase 4: Field Operations** | Field Entry, Communication, Hardware, Mobile Sync | SMS, server-field comms, valve automation, offline app stub |
+| **Phase 5: Reporting & Export** | Reports, API, Export | LaTeX/PDF, WaPOR/weather APIs, CSV exports |
+
+**Sidebar ↔ dashboard linking:** Changing country, year, crop, climate scenario, furrow parameters, or scheduling method triggers a notice to re-run **Run Simulation-Optimization** so all phase results stay consistent.
+
+See `ENHANCEMENT_DOCUMENTATION.md` for full implementation notes (DSSIS used for brainstorming only).
+
 ### Basic Workflow
 1. **Login**: Enter your name and institution
-2. **Configure**: Set parameters in the sidebar
-3. **Run Simulation**: Click "Run Simulation-Optimization"
-4. **Analyze Results**: Explore different tabs for detailed analysis
+2. **Configure**: Set parameters in the sidebar (including Field Operations when needed)
+3. **Run Simulation**: Click **Run Simulation-Optimization**
+4. **Phase 1–2**: Review drivers, optimization, and uncertainty
+5. **Phase 3**: Generate irrigation timing and amount
+6. **Phase 4**: Sync with field users (SMS, mobile, hardware)
+7. **Phase 5**: Export reports and data
+
+### Legacy Tab Mapping (pre-phase UI)
+
+For reference, the original 12-tab layout maps as follows:
+
+- Analysis Dashboard → Phase 1
+- Optimization / Uncertainty / GIS / ML / Irrigation Physics / Economic → Phase 2
+- Field Entry → Phase 4
+- Climate Downscaling → Phase 1
+- Report Generator / API / Export → Phase 5
 
 ### Enhanced Features Workflow
 
 #### GIS Integration
-1. Go to "🗺️ GIS Integration" tab
+1. Go to **Phase 2 → 🗺️ GIS** sub-tab
 2. Select region or enter coordinates manually
 3. Click on map to extract site parameters
 4. Upload shapefiles for watershed analysis
 5. View extracted soil and climate data
 
 #### ML Surrogates
-1. Go to "🤖 ML Surrogates" tab
+1. Go to **Phase 2 → 🤖 ML & Economic** sub-tab
 2. Choose model type and target variable
 3. Train new model or load pre-trained model
 4. Analyze with SHAP and LIME visualizations
 5. Download trained models
 
 #### Irrigation Physics
-1. Go to "⚙️ Irrigation Physics" tab
+1. Go to **Phase 2 → ⚙️ Irrigation Physics** sub-tab
 2. Configure furrow parameters and soil properties
 3. View infiltration curves and hydraulic analysis
 4. Analyze advance/recession curves
 5. Review efficiency metrics
 
 #### Climate Downscaling
-1. Go to "🌡️ Climate Downscaling" tab
+1. Go to **Phase 1 → 🌡️ Climate Downscaling** sub-tab
 2. Select CMIP6 scenario and GCM model
 3. Set target location and downscaling method
 4. Generate synthetic weather data
 5. Compare historical vs projected climate
 
 #### Economic Analysis
-1. Go to "💰 Economic Analysis" tab
+1. Go to **Phase 2 → 🤖 ML & Economic** sub-tab (economic panel)
 2. Configure crop prices and input costs
 3. Run economic optimization
 4. Analyze Pareto fronts and profitability
 5. Perform sensitivity analysis
 
 #### Report Generation
-1. Go to "📄 Report Generator" tab
+1. Go to **Phase 5 → 📄 Reports** sub-tab
 2. Select report type and customize content
 3. Generate PDF or LaTeX output
 4. Download BibTeX references
 5. Include figures and tables
 
 #### API Connectors
-1. Go to "📡 API Connectors" tab
+1. Go to **Phase 5 → 📡 API** sub-tab
 2. Enter API keys
 3. Select location and fetch data
 4. View integrated dashboard
@@ -164,19 +193,31 @@ pip install pylatex python-bibtex pydantic pyproj rasterio
 
 ## 📊 Original Features (Preserved)
 
-All original features remain intact:
-- **📊 Analysis Dashboard**: Core nexus projections and metrics
-- **🎯 Optimization Engine**: NSGA-II and GA optimization
-- **📝 Field Entry**: Detailed field observation database
-- **🎲 Uncertainty Analysis**: Monte Carlo and SALib sensitivity
-- **📂 Export**: Data export and archiving
+All original features remain intact inside the phased layout:
+
+- **📊 Analysis Dashboard** → Phase 1
+- **🎯 Optimization Engine** → Phase 2
+- **📝 Field Entry** → Phase 4
+- **🎲 Uncertainty Analysis** → Phase 2
+- **🗺️ GIS Integration** → Phase 2
+- **🤖 ML Surrogates** → Phase 2
+- **⚙️ Irrigation Physics** → Phase 2
+- **🌡️ Climate Downscaling** → Phase 1
+- **💰 Economic Analysis** → Phase 2
+- **📄 Report Generator** → Phase 5
+- **📡 API Connectors** → Phase 5
+- **📂 Export** → Phase 5
+
+**New (scholar suggestions):** Phase 3 irrigation scheduling; Phase 4 server-field comms, SMS, hardware control, mobile sync stub.
 
 ## 🔧 Technical Architecture
 
 ### Module Structure
 ```
 tokuma-3-in-1-enhanced/
-├── app.py                    # Main Streamlit application
+├── app.py                    # Main Streamlit application (5-phase UI)
+├── app_original.py           # Backup of pre-phase 12-tab layout
+├── ENHANCEMENT_DOCUMENTATION.md  # Scholar suggestions implementation notes
 ├── nexus_core.py            # Core simulation engine
 ├── model_templates/         # File-coupled simulation templates
 ├── gis_integration.py       # Geospatial analysis module
