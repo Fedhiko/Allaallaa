@@ -6,6 +6,7 @@ plotly>=5.18.0
 scipy>=1.10.0
 requests>=2.31.0
 pydantic>=2.0.0
+psycopg2-binary>=2.9.9  # PostgreSQL driver for cloud deployment
 
 # Optional dependencies - will be handled gracefully if not available
 SALib>=1.4.7

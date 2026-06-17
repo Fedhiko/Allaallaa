@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
+
+# PostgreSQL support for cloud deployment
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
 
 from nexus_core import (
     _pack_context,
@@ -289,8 +298,37 @@ class IrrigationScheduler:
 # DATABASE SETUP
 # ------------------------------
 def init_db():
-    conn = sqlite3.connect("tokuma_phd_research.db", check_same_thread=False, timeout=30)
-    c = conn.cursor()
+    """Initialize database: PostgreSQL for cloud, SQLite for local dev"""
+    # Check for PostgreSQL credentials (Streamlit Cloud secrets)
+    use_postgres = (
+        "database" in st.secrets and 
+        "host" in st.secrets and 
+        PSYCOPG2_AVAILABLE
+    )
+    
+    if use_postgres:
+        # Cloud: PostgreSQL
+        try:
+            conn = psycopg2.connect(
+                host=st.secrets["host"],
+                database=st.secrets["database"],
+                user=st.secrets["user"],
+                password=st.secrets["password"],
+                port=st.secrets.get("port", 5432)
+            )
+            c = conn.cursor()
+            st.session_state.db_type = "postgres"
+        except Exception as e:
+            st.warning(f"PostgreSQL not available: {e}. Using local SQLite.")
+            conn = sqlite3.connect("tokuma_phd_research.db", check_same_thread=False, timeout=30)
+            c = conn.cursor()
+            st.session_state.db_type = "sqlite"
+    else:
+        # Local: SQLite
+        conn = sqlite3.connect("tokuma_phd_research.db", check_same_thread=False, timeout=30)
+        c = conn.cursor()
+        st.session_state.db_type = "sqlite"
+    
     c.execute(
         """CREATE TABLE IF NOT EXISTS research_logs(
         timestamp TEXT, researcher TEXT, email TEXT, country TEXT,
